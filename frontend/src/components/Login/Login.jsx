@@ -30,6 +30,7 @@ const Login = () => {
                 <input
                   type='email'
                   name='email'
+                  id='email'
                   autoComplete='email'
                   required
                   value={email}
@@ -49,6 +50,7 @@ const Login = () => {
                 <input
                   type={visible ? "text" : "password"}
                   name='password'
+                  id='password'
                   autoComplete='current-password'
                   required
                   value={password}
