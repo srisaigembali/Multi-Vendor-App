@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import styles from "../../styles/styles";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { RxAvatar } from "react-icons/rx";
+import axios from "axios";
+import { server } from "../../server";
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -10,6 +12,8 @@ const SignUp = () => {
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [avatar, setAvatar] = useState(null);
+
+  const navigate = useNavigate();
 
   const handleFileInputChange = (e) => {
     const reader = new FileReader();
@@ -23,8 +27,18 @@ const SignUp = () => {
     reader.readAsDataURL(e.target.files[0]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    axios
+      .post(`${server}/user/create-user`, { name, email, password, avatar })
+      .then((res) => {
+        if (res.data.success === true) navigate("/");
+        setName("");
+        setEmail("");
+        setPassword("");
+        setAvatar();
+      });
   };
 
   return (
