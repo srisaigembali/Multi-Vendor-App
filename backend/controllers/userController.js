@@ -6,6 +6,7 @@ import catchAsyncErrors from "../middlewares/catchAsyncErrors.js";
 import jwt from "jsonwebtoken";
 import sendMail from "../utils/sendMail.js";
 import sendToken from "../utils/sendJwtToken.js";
+import { isAuthenticated } from "../middlewares/auth.js";
 
 const router = express.Router();
 
@@ -15,7 +16,12 @@ router.post("/create-user", async (req, res, next) => {
     const userEmail = await User.findOne({ email });
 
     if (userEmail) {
-      return next(new ErrorHandler("User Already Exists", 400));
+      return next(
+        res.status(400).json({
+          success: false,
+          message: "User Already Exists!",
+        })
+      );
     }
 
     const myCloud = await cloudinary.v2.uploader.upload(avatar, {
@@ -74,14 +80,24 @@ router.post(
       );
 
       if (!newUser) {
-        return next(new ErrorHandler("Invalid token", 400));
+        return next(
+          res.status(400).json({
+            success: false,
+            message: "Invalid token",
+          })
+        );
       }
       const { name, email, password, avatar } = newUser;
 
       let user = await User.findOne({ email });
 
       if (user) {
-        return next(new ErrorHandler("User already exists", 400));
+        return next(
+          res.status(400).json({
+            success: false,
+            message: "User Already Exists!",
+          })
+        );
       }
       user = await User.create({
         name,
@@ -93,6 +109,83 @@ router.post(
       sendToken(user, 201, res);
     } catch (error) {
       return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
+
+// login user
+router.post(
+  "/login-user",
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return next(
+          res.status(400).json({
+            success: false,
+            message: "Please provide all the fields!",
+          })
+        );
+      }
+
+      const user = await User.findOne({ email }).select("+password");
+
+      if (!user) {
+        return next(
+          res.status(400).json({
+            success: false,
+            message: "User doesn't exists!",
+          })
+        );
+      }
+
+      const isPasswordValid = await user.comparePassword(password);
+
+      if (!isPasswordValid) {
+        return next(
+          res.status(400).json({
+            success: false,
+            message: "Please provide the correct information",
+          })
+        );
+      }
+
+      sendToken(user, 201, res);
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
+
+// load user
+router.get(
+  "/getuser",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return next(
+          res.status(400).json({
+            success: false,
+            message: "User doesn't exists",
+          })
+        );
+      }
+
+      res.status(200).json({
+        success: true,
+        user,
+      });
+    } catch (error) {
+      return next(
+        res.status(400).json({
+          success: false,
+          message: error.message,
+        })
+      );
     }
   })
 );
